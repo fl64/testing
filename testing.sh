@@ -4,6 +4,8 @@ curl_output="%{local_ip}:%{local_port} -> %{remote_ip}:%{remote_port} = %{respon
 prober_ns="cilium-test-prober"
 prober_pod="deployments/prober"
 
+testcase="default"
+
 capture () {
   # src https://gist.github.com/pmarreck/5eacc6482bc19b55b7c2f48b4f1db4e8
   local out_var out err_var err ret_var ret
@@ -38,7 +40,7 @@ curl_output_wrapper() {
     fi
   fi
   #echo $icon $t_stdout $t_stderr
-  printf '{ "status":"%s", "type" : "%s", "stdout":"%s", "exit_code":"%s", "stderr":"%s"}\n' "${status}" "${1}" "${t_stdout}" "${t_ret}" "${t_stderr}" | jq -c .
+  printf '{ "script": "%s", "status":"%s", "type" : "%s", "stdout":"%s", "exit_code":"%s", "stderr":"%s"}\n' "${testcase}" "${status}" "${1}" "${t_stdout}" "${t_ret}" "${t_stderr}" | jq -c .
   return "${t_ret}"
 }
 
@@ -51,6 +53,16 @@ curl_output_wrapper() {
   curl_output_wrapper curl_remote "${@}"
   return $?
 }
+
+@test_case() {
+  printf '{ "test_case": "%s" }\n' "${testcase}" | jq -c .
+}
+
+for test_case in $(find testcases/ -mindepth 1 -maxdepth 1 -type d | sort -t '\0' -n ); do
+  source "${test_case}/test.sh"
+done
+
+
 
 for url in "1.1.2.1" "1.1.1.1" "https://google.com/" "https://rickandmortyapi.com/api"
 do
